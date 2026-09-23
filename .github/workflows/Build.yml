@@ -37,11 +37,11 @@ jobs:
 
       - name: Compile Dylib
         run: |
-          make
+          make FINALPACKAGE=1
 
       - name: Upload Dylib Artifact
         uses: actions/upload-artifact@v4
         with:
           name: WheeDownloader-Dylib
-          path: .theos/obj/*.dylib
+          path: .theos/obj/**/*.dylib
           if-no-files-found: error
