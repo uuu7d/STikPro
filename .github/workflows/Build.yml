@@ -17,15 +17,19 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install ldid
+        run: |
+          brew install ldid
+
       - name: Install & Setup Theos
         run: |
           # 1. تحميل بيئة Theos
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
           
-          # 2. إزالة مجلد sdks الافتراضي لتجنب تعارض git clone
+          # 2. إزالة مجلد sdks الافتراضي
           rm -rf $HOME/theos/sdks
           
-          # 3. جلب الـ SDKs بكتلة خفيفة وسريعة (--depth=1)
+          # 3. جلب الـ SDKs
           git clone --depth=1 https://github.com/theos/sdks.git $HOME/theos/sdks
           
           # 4. تعريف متغير البيئة THEOS
