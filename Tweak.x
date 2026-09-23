@@ -1,7 +1,7 @@
 #import "TikTok.h"
 
 // ============================================================================
-// 1. Unmute Audio (إلغاء كتم الصوت)
+// 1. Unmute Audio
 // ============================================================================
 %hook AWEAwemeStatusModel
 - (void)setVideoMuteModel:(id)arg1 {
@@ -10,7 +10,7 @@
 %end
 
 // ============================================================================
-// 2. Force 1080p HD & HDR Uploads (رفع بجودة عالية)
+// 2. Force 1080p HD & HDR Uploads
 // ============================================================================
 %hook AWEVideoPublishSettingsViewModel
 - (bool)enableHDPublish { return YES; }
@@ -60,25 +60,20 @@
 %end
 
 // ============================================================================
-// 3. Download Stories - Videos & Photos (تحميل الستوري)
+// 3. Download Stories (Hooking TTKRichContentPlayerViewController)
 // ============================================================================
 %group HooksTikTokStory
 
-%hook TTKStoryDetailTableViewCell
+%hook TTKRichContentPlayerViewController
 
-- (void)configWithModel:(id)model {
-    %orig;
-    [self setupStoryDownloadButton];
-}
-
-- (void)configureWithModel:(id)model {
+- (void)viewDidAppear:(BOOL)animated {
     %orig;
     [self setupStoryDownloadButton];
 }
 
 %new
 - (void)setupStoryDownloadButton {
-    if (![self viewWithTag:9003]) {
+    if (![self.view viewWithTag:9003]) {
         UIButton *downloadStoryBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         downloadStoryBtn.tag = 9003;
         
@@ -88,11 +83,11 @@
         downloadStoryBtn.translatesAutoresizingMaskIntoConstraints = NO;
         
         [downloadStoryBtn addTarget:self action:@selector(handleStoryDownloadTap:) forControlEvents:UIControlEventTouchUpInside];
-        [self addSubview:downloadStoryBtn];
+        [self.view addSubview:downloadStoryBtn];
 
         [NSLayoutConstraint activateConstraints:@[
-            [downloadStoryBtn.topAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.topAnchor constant:50],
-            [downloadStoryBtn.trailingAnchor constraintEqualToAnchor:self.safeAreaLayoutGuide.trailingAnchor constant:-15],
+            [downloadStoryBtn.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:50],
+            [downloadStoryBtn.trailingAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.trailingAnchor constant:-15],
             [downloadStoryBtn.widthAnchor constraintEqualToConstant:35],
             [downloadStoryBtn.heightAnchor constraintEqualToConstant:35]
         ]];
@@ -102,34 +97,62 @@
 %new
 - (void)handleStoryDownloadTap:(UIButton *)sender {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIViewController *vc = [self viewController];
-        if ([vc isKindOfClass:%c(TTKStoryDetailContainerViewController)]) {
-            id storyModel = [vc valueForKey:@"_model"];
+        id model = nil;
+        @try { model = [self valueForKey:@"awemeModel"]; } @catch (NSException *e) {}
+        if (!model) { @try { model = [self valueForKey:@"model"]; } @catch (NSException *e) {} }
+        if (!model) { @try { model = [self valueForKey:@"_model"]; } @catch (NSException *e) {} }
+        
+        if (model) {
+            // 1. استخراج فيديو الستوري
+            id videoModel = nil;
+            @try { videoModel = [model valueForKey:@"video"]; } @catch (NSException *e) {}
+            if (!videoModel) { @try { videoModel = [model valueForKey:@"_video"]; } @catch (NSException *e) {} }
             
-            // 1. التحقق أولاً إذا كان الستوري فيديو
-            id videoModel = [storyModel valueForKey:@"_video"];
-            id playURLModel = [videoModel valueForKey:@"_playURL"];
-            NSArray *videoURLs = [playURLModel valueForKey:@"_originURLList"];
+            id playURLModel = nil;
+            if (videoModel) {
+                @try { playURLModel = [videoModel valueForKey:@"playURL"]; } @catch (NSException *e) {}
+                if (!playURLModel) { @try { playURLModel = [videoModel valueForKey:@"_playURL"]; } @catch (NSException *e) {} }
+            }
+            
+            NSArray *videoURLs = nil;
+            if (playURLModel) {
+                @try { videoURLs = [playURLModel valueForKey:@"originURLList"]; } @catch (NSException *e) {}
+                if (!videoURLs) { @try { videoURLs = [playURLModel valueForKey:@"_originURLList"]; } @catch (NSException *e) {} }
+            }
             
             if (videoURLs.count > 0 && [videoURLs.firstObject length] > 0) {
                 NSURL *directURL = [NSURL URLWithString:videoURLs.firstObject];
-                NSString *pathSave = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.mp4", [directURL lastPathComponent]]];
+                NSString *pathSave = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"story_%@.mp4", [[NSUUID UUID] UUIDString]]];
                 [self downloadFileFromURL:directURL saveToPath:pathSave];
                 return;
             }
             
-            // 2. التحقق إذا كان الستوري صورة
-            id photoAlbum = [storyModel valueForKey:@"_photoAlbum"];
-            NSArray *photos = [photoAlbum valueForKey:@"_photos"];
+            // 2. استخراج صورة الستوري
+            id photoAlbum = nil;
+            @try { photoAlbum = [model valueForKey:@"photoAlbum"]; } @catch (NSException *e) {}
+            if (!photoAlbum) { @try { photoAlbum = [model valueForKey:@"_photoAlbum"]; } @catch (NSException *e) {} }
+            
+            NSArray *photos = nil;
+            if (photoAlbum) {
+                @try { photos = [photoAlbum valueForKey:@"photos"]; } @catch (NSException *e) {}
+                if (!photos) { @try { photos = [photoAlbum valueForKey:@"_photos"]; } @catch (NSException *e) {} }
+            }
             
             if (photos.count > 0) {
                 id firstPhoto = photos.firstObject;
-                id originPhotoURL = [firstPhoto valueForKey:@"_originPhotoURL"];
-                NSArray *photoURLs = [originPhotoURL valueForKey:@"_originURLList"];
+                id originPhotoURL = nil;
+                @try { originPhotoURL = [firstPhoto valueForKey:@"originPhotoURL"]; } @catch (NSException *e) {}
+                if (!originPhotoURL) { @try { originPhotoURL = [firstPhoto valueForKey:@"_originPhotoURL"]; } @catch (NSException *e) {} }
+                
+                NSArray *photoURLs = nil;
+                if (originPhotoURL) {
+                    @try { photoURLs = [originPhotoURL valueForKey:@"originURLList"]; } @catch (NSException *e) {}
+                    if (!photoURLs) { @try { photoURLs = [originPhotoURL valueForKey:@"_originURLList"]; } @catch (NSException *e) {} }
+                }
                 
                 if (photoURLs.count > 0 && [photoURLs.firstObject length] > 0) {
                     NSURL *directURL = [NSURL URLWithString:photoURLs.firstObject];
-                    NSString *pathSave = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.jpg", [directURL lastPathComponent]]];
+                    NSString *pathSave = [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"story_%@.jpg", [[NSUUID UUID] UUIDString]]];
                     [self downloadFileFromURL:directURL saveToPath:pathSave];
                 }
             }
@@ -144,6 +167,16 @@
             NSFileManager *fileManager = [NSFileManager defaultManager];
             [fileManager removeItemAtPath:path error:nil];
             [fileManager moveItemAtURL:location toURL:[NSURL fileURLWithPath:path] error:nil];
+            
+            // حفظ تلقائي في ألبوم الصور
+            if ([path hasSuffix:@".mp4"]) {
+                UISaveVideoAtPathToSavedPhotosAlbum(path, nil, nil, nil);
+            } else if ([path hasSuffix:@".jpg"]) {
+                UIImage *image = [UIImage imageWithContentsOfFile:path];
+                if (image) {
+                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+                }
+            }
         }
     }];
     [task resume];
@@ -157,8 +190,6 @@
 // Constructor
 // ============================================================================
 %ctor {
-    // تفعيل الهوكات مباشرة بدون التحقق من Bundle ID
     %init(HooksTikTokStory);
     %init(_ungrouped);
 }
-
