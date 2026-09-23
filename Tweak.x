@@ -1,6 +1,15 @@
 #import "TikTok.h"
 #import <Photos/Photos.h>
 
+// إعلان الواجهة للدوال الجديدة لمنع أخطاء المترجم (Clang Forward Declaration)
+@interface TTKRichContentPlayerViewController (WheeDownloader)
+- (void)setupStoryDownloadButton;
+- (void)handleStoryDownloadTap:(UIButton *)sender;
+- (void)downloadAndSaveHDImage:(NSString *)urlString;
+- (void)downloadAndSaveHDVideo:(NSString *)urlString;
+- (void)video:(NSString *)videoPath didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo;
+@end
+
 %group WheeUniversalDownloader
 
 %hook TTKRichContentPlayerViewController
