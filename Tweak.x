@@ -157,9 +157,8 @@
 // Constructor
 // ============================================================================
 %ctor {
-    NSString *bundleID = [[NSBundle mainBundle] bundleIdentifier];
-    if ([bundleID isEqualToString:@"com.zhiliaoapp.musically"] || [bundleID isEqualToString:@"com.ss.iphone.ugc.Ame"]) {
-        %init(HooksTikTokStory);
-        %init(_ungrouped);
-    }
+    // تفعيل الهوكات مباشرة بدون التحقق من Bundle ID
+    %init(HooksTikTokStory);
+    %init(_ungrouped);
 }
+
