@@ -1,32 +1,65 @@
-name: Build STikPro (.dylib)
+name: Build Theos Tweak (dylib)
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
   pull_request:
-    branches: [ main, master ]
 
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      THEOS: ${{ github.workspace }}/theos
+      SDKVERSION: 16.5
+      LD_SHARED_CACHE_ELIGIBLE: "NO"
 
     steps:
-      - name: Checkout Repository
+      - name: 🔄 Checkout repository
         uses: actions/checkout@v4
+
+      - name: ⚙️ Cache Theos
+        uses: actions/cache@v3
         with:
-          submodules: recursive
+          path: ${{ github.workspace }}/theos
+          key: theos-cache-${{ runner.os }}
 
-      - name: Setup Theos
-        uses: theos/setup-theos@v1
-
-      - name: Build dylib
+      - name: 🛠️ Install dependencies
         run: |
+          brew update || true
+          brew install dpkg ldid make git perl
+
+      - name: 📦 Setup Theos and SDK 16.5
+        run: |
+          if [ ! -d "$THEOS" ]; then
+            git clone --recursive https://github.com/theos/theos.git $THEOS
+          fi
+
+          if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
+            mkdir -p $THEOS/sdks
+            curl -L -o $THEOS/sdks/iPhoneOS16.5.sdk.tar.xz \
+              https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
+            tar -xJf $THEOS/sdks/iPhoneOS16.5.sdk.tar.xz -C $THEOS/sdks
+          fi
+
+      - name: 🧩 Build dylib (no deb)
+        run: |
+          set -e
+          export THEOS="$THEOS"
+          export PATH="$THEOS/bin:$PATH"
+          export LD_SHARED_CACHE_ELIGIBLE=NO
+
+          echo "🏗️ Building dylib using Theos..."
+          make clean || true
           make FINALPACKAGE=1
+          
           mkdir -p output
           find .theos/obj/ -name "*.dylib" -exec cp {} output/ \;
+          echo "✅ dylib build finished"
 
-      - name: Upload dylib Artifact
+      - name: 📤 Upload dylib
         uses: actions/upload-artifact@v4
         with:
-          name: STikPro-dylib
+          name: TikTokStorySaver-dylib
           path: output/*.dylib
