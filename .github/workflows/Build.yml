@@ -22,10 +22,13 @@ jobs:
           # 1. تحميل بيئة Theos
           git clone --recursive https://github.com/theos/theos.git $HOME/theos
           
-          # 2. تحميل ملفات iOS SDKs لضمان البناء بدون نقص
-          git clone https://github.com/theos/sdks.git $HOME/theos/sdks
+          # 2. إزالة مجلد sdks الافتراضي لتجنب تعارض git clone
+          rm -rf $HOME/theos/sdks
           
-          # 3. تعريف متغير البيئة THEOS لجميع الخطوات القادمة
+          # 3. جلب الـ SDKs بكتلة خفيفة وسريعة (--depth=1)
+          git clone --depth=1 https://github.com/theos/sdks.git $HOME/theos/sdks
+          
+          # 4. تعريف متغير البيئة THEOS
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
       - name: Compile Dylib
