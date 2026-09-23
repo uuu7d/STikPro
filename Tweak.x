@@ -11,7 +11,6 @@
 
 %new
 - (void)setupStoryDownloadButton {
-    // منع تكرار إضافة الزر إذا كان موجوداً بالفعل
     if ([self.view viewWithTag:9003]) {
         return;
     }
@@ -19,7 +18,6 @@
     UIButton *downloadBtn = [UIButton buttonWithType:UIButtonTypeCustom];
     downloadBtn.tag = 9003;
     
-    // تصميم زر تحميل أنيق مع خلفية ضبابية دائريّة
     UIImage *btnIcon = [UIImage systemImageNamed:@"arrow.down.circle.fill"];
     [downloadBtn setImage:btnIcon forState:UIControlStateNormal];
     downloadBtn.tintColor = [UIColor whiteColor];
@@ -31,7 +29,6 @@
     [downloadBtn addTarget:self action:@selector(handleStoryDownloadTap:) forControlEvents:UIControlEventTouchUpInside];
     [self.view addSubview:downloadBtn];
 
-    // قيود التموضع (Constraints)
     [NSLayoutConstraint activateConstraints:@[
         [downloadBtn.topAnchor constraintEqualToAnchor:self.view.safeAreaLayoutGuide.topAnchor constant:50],
         [downloadBtn.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
@@ -44,9 +41,7 @@
 - (void)handleStoryDownloadTap:(UIButton *)sender {
     dispatch_async(dispatch_get_main_queue(), ^{
         
-        // ====================================================================
-        // المستوى 1: السحب المباشر من الذاكرة (ACCImageMediaContainerView)
-        // ====================================================================
+        // 1. السحب المباشر من الذاكرة (RAM)
         for (UIView *subview in self.view.subviews) {
             if ([subview isKindOfClass:NSClassFromString(@"ACCImageMediaContainerView")]) {
                 ACCImageMediaContainerView *imageContainer = (ACCImageMediaContainerView *)subview;
@@ -63,9 +58,7 @@
             }
         }
 
-        // ====================================================================
-        // استخراج كائن البيانات الأساسي (AwemeModel)
-        // ====================================================================
+        // 2. استخراج كائن AwemeModel
         id model = nil;
         @try { model = [self valueForKey:@"awemeModel"]; } @catch (NSException *e) {}
         if (!model) { @try { model = [self valueForKey:@"model"]; } @catch (NSException *e) {} }
@@ -75,9 +68,7 @@
             return;
         }
 
-        // ====================================================================
-        // المستوى 2: التنزيل المباشر للسيرفر (AWEMediaDownloader)
-        // ====================================================================
+        // 3. التنزيل المباشر للفيديو عبر AWEMediaDownloader
         id videoModel = nil;
         @try { videoModel = [model valueForKey:@"video"]; } @catch (NSException *e) {}
         if (!videoModel) { @try { videoModel = [model valueForKey:@"_video"]; } @catch (NSException *e) {} }
@@ -94,16 +85,14 @@
             if (!videoURLs) { @try { videoURLs = [playURLModel valueForKey:@"_originURLList"]; } @catch (NSException *e) {} }
         }
 
-        // إذا وُجد رابط فيديو صالح
         if (videoURLs.count > 0 && [videoURLs.firstObject length] > 0) {
             NSString *videoURL = videoURLs.firstObject;
             
-            // إظهار واجهة التنزيل الأصلية
-            [ClassFromString(@"AWEMediaDownloader") _showLoadingView];
+            [NSClassFromString(@"AWEMediaDownloader") _showLoadingView];
             
-            [ClassFromString(@"AWEMediaDownloader") downloadVideoToAlbumWithURLString:videoURL completion:^(id result, NSError *error) {
+            [NSClassFromString(@"AWEMediaDownloader") downloadVideoToAlbumWithURLString:videoURL completion:^(id result, NSError *error) {
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    [ClassFromString(@"AWEMediaDownloader") _dismissLoadingView];
+                    [NSClassFromString(@"AWEMediaDownloader") _dismissLoadingView];
                     if (!error) {
                         NSLog(@"[WheeDownloader] Success: Video saved to album via AWEMediaDownloader!");
                     } else {
@@ -114,23 +103,20 @@
             return;
         }
 
-        // ====================================================================
-        // المستوى 3: خط التراجع للألبومات والرسائل (AWEIMMediaDownloader & Options)
-        // ====================================================================
+        // 4. خط التراجع للألبومات والرسائل (AWEIMMediaDownloader & Options)
         AWEIMMediaDownloaderOptions *options = [[NSClassFromString(@"AWEIMMediaDownloaderOptions") alloc] init];
         options.model = model;
         options.needsSaveToAlbum = YES;
         options.willBlockUserInteraction = NO;
 
-        // استغلال AWEIMMediaUtility للتأكد من جاهزية مسارات التخزين المؤقت
-        NSString *tempPath = [ClassFromString(@"AWEIMMediaUtility") mediaDataTempDirectory];
+        NSString *tempPath = [NSClassFromString(@"AWEIMMediaUtility") mediaDataTempDirectory];
         NSLog(@"[WheeDownloader] Using temp directory: %@", tempPath);
 
-        [ClassFromString(@"AWEMediaDownloader") _showLoadingView];
+        [NSClassFromString(@"AWEMediaDownloader") _showLoadingView];
 
-        [ClassFromString(@"AWEIMMediaDownloader") requestDMMediaWithOptions:options completion:^(id result, NSError *error) {
+        [NSClassFromString(@"AWEIMMediaDownloader") requestDMMediaWithOptions:options completion:^(id result, NSError *error) {
             dispatch_async(dispatch_get_main_queue(), ^{
-                [ClassFromString(@"AWEMediaDownloader") _dismissLoadingView];
+                [NSClassFromString(@"AWEMediaDownloader") _dismissLoadingView];
                 if (!error) {
                     NSLog(@"[WheeDownloader] Success: Saved via AWEIMMediaDownloader!");
                 } else {
