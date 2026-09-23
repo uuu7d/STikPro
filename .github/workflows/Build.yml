@@ -1,0 +1,32 @@
+name: Build STikPro (.dylib)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Theos
+        uses: theos/setup-theos@v1
+
+      - name: Build dylib
+        run: |
+          make FINALPACKAGE=1
+          mkdir -p output
+          find .theos/obj/ -name "*.dylib" -exec cp {} output/ \;
+
+      - name: Upload dylib Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: STikPro-dylib
+          path: output/*.dylib
