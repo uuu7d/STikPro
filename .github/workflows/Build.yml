@@ -46,20 +46,21 @@ jobs:
       - name: 🧩 Build dylib (no deb)
         run: |
           set -e
-          export THEOS="$THEOS"
+          export THEOS="${{ github.workspace }}/theos"
           export PATH="$THEOS/bin:$PATH"
           export LD_SHARED_CACHE_ELIGIBLE=NO
 
           echo "🏗️ Building dylib using Theos..."
-          make clean || true
-          make FINALPACKAGE=1
+          make clean THEOS="$THEOS" || true
+          make FINALPACKAGE=1 THEOS="$THEOS"
           
           mkdir -p output
           find .theos/obj/ -name "*.dylib" -exec cp {} output/ \;
           echo "✅ dylib build finished"
 
+
       - name: 📤 Upload dylib
         uses: actions/upload-artifact@v4
         with:
-          name: TikTokStorySaver-dylib
+          name: STikPro-dylib
           path: output/*.dylib
