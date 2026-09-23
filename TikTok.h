@@ -6,6 +6,11 @@
 
 @interface TTKStoryDetailTableViewCell : UITableViewCell
 - (UIViewController *)viewController;
+
+// تصريح عن الدوال الجديدة لتفادي خطأ المترجم (no visible @interface)
+- (void)setupStoryDownloadButton;
+- (void)handleStoryDownloadTap:(UIButton *)sender;
+- (void)downloadFileFromURL:(NSURL *)url saveToPath:(NSString *)path;
 @end
 
 @interface AWEAwemeStatusModel : NSObject
