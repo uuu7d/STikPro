@@ -10,10 +10,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    env:
-      THEOS: ${{ github.workspace }}/theos
-      SDKVERSION: 16.5
-      LD_SHARED_CACHE_ELIGIBLE: "NO"
 
     steps:
       - name: 🔄 Checkout repository
@@ -32,32 +28,33 @@ jobs:
 
       - name: 📦 Setup Theos and SDK 16.5
         run: |
-          if [ ! -d "$THEOS" ]; then
-            git clone --recursive https://github.com/theos/theos.git $THEOS
+          THEOS_PATH="${{ github.workspace }}/theos"
+          echo "THEOS=$THEOS_PATH" >> $GITHUB_ENV
+          
+          if [ ! -d "$THEOS_PATH" ]; then
+            git clone --recursive https://github.com/theos/theos.git "$THEOS_PATH"
           fi
 
-          if [ ! -d "$THEOS/sdks/iPhoneOS16.5.sdk" ]; then
-            mkdir -p $THEOS/sdks
-            curl -L -o $THEOS/sdks/iPhoneOS16.5.sdk.tar.xz \
+          if [ ! -d "$THEOS_PATH/sdks/iPhoneOS16.5.sdk" ]; then
+            mkdir -p "$THEOS_PATH/sdks"
+            curl -L -o "$THEOS_PATH/sdks/iPhoneOS16.5.sdk.tar.xz" \
               https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz
-            tar -xJf $THEOS/sdks/iPhoneOS16.5.sdk.tar.xz -C $THEOS/sdks
+            tar -xJf "$THEOS_PATH/sdks/iPhoneOS16.5.sdk.tar.xz" -C "$THEOS_PATH/sdks"
+            rm "$THEOS_PATH/sdks/iPhoneOS16.5.sdk.tar.xz"
           fi
 
-      - name: 🧩 Build dylib (no deb)
+      - name: 🧩 Build dylib
         run: |
-          set -e
-          export THEOS="${{ github.workspace }}/theos"
           export PATH="$THEOS/bin:$PATH"
           export LD_SHARED_CACHE_ELIGIBLE=NO
 
-          echo "🏗️ Building dylib using Theos..."
-          make clean THEOS="$THEOS" || true
-          make FINALPACKAGE=1 THEOS="$THEOS"
+          echo "🏗️ Building dylib using Theos from $THEOS..."
+          make clean
+          make FINALPACKAGE=1
           
           mkdir -p output
           find .theos/obj/ -name "*.dylib" -exec cp {} output/ \;
           echo "✅ dylib build finished"
-
 
       - name: 📤 Upload dylib
         uses: actions/upload-artifact@v4
