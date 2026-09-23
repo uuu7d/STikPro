@@ -1,14 +1,12 @@
-THEOS ?= ./theos
-
 TARGET := iphone:clang:latest:14.0
-ARCHS := arm64 arm64e
-INSTALL_TARGET_PROCESSES := TikTok
+INSTALL_TYPE := rootless
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME := STikPro
+TWEAK_NAME = WheeDownloader
 
-STikPro_FILES := Tweak.x
-STikPro_CFLAGS := -fobjc-arc
+WheeDownloader_FILES = Tweak.x
+WheeDownloader_CFLAGS = -fobjc-arc
+WheeDownloader_FRAMEWORKS = UIKit Foundation AVFoundation Photos
 
-include $(THEOS)/makefiles/tweak.mk
+include $(THEOS_MAKE_PATH)/tweak.mk
