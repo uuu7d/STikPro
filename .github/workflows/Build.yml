@@ -5,7 +5,7 @@ on:
     branches: [ "main", "master" ]
   pull_request:
     branches: [ "main", "master" ]
-  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً بنقرة زر
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,14 +17,20 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Theos Environment
-        uses: theos/setup-theos@v1
+      - name: Install & Setup Theos
+        run: |
+          # 1. تحميل بيئة Theos
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          
+          # 2. تحميل ملفات iOS SDKs لضمان البناء بدون نقص
+          git clone https://github.com/theos/sdks.git $HOME/theos/sdks
+          
+          # 3. تعريف متغير البيئة THEOS لجميع الخطوات القادمة
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
       - name: Compile Dylib
         run: |
           make
-          # التأكد من وجود ملف dylib الناتج
-          find .theos/obj/ -name "*.dylib"
 
       - name: Upload Dylib Artifact
         uses: actions/upload-artifact@v4
