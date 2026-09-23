@@ -1,0 +1,9 @@
+Package: com.uuu7d.STikPro
+Name: STikPro
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm
+Description: Custom TikTok tweak for downloading media, forcing 1080p uploads, and unmuting audio.
+Maintainer: uuu7d
+Author: uuu7d
+Section: Tweaks
