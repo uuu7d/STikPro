@@ -135,7 +135,6 @@
 - (void)setupStoryDownloadButton {
     if ([self.view viewWithTag:9003]) return;
 
-    // إنشاء زر بلمسة زجاجية مدرعة (Glassmorphic Button)
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:[UIBlurEffect effectWithStyle:UIBlurEffectStyleSystemThinMaterialDark]];
     blurView.tag = 9003;
     blurView.layer.cornerRadius = 22.0;
@@ -148,7 +147,6 @@
     downloadBtn.tintColor = [UIColor whiteColor];
     downloadBtn.translatesAutoresizingMaskIntoConstraints = NO;
 
-    // إشارات اللمس والحركة (Animations & Touches)
     [downloadBtn addTarget:self action:@selector(handleStoryDownloadTap:) forControlEvents:UIControlEventTouchUpInside];
     [downloadBtn addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
     [downloadBtn addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpOutside];
@@ -187,13 +185,13 @@
 
 %new
 - (void)triggerHapticFeedback:(NSInteger)type {
-    if (type == 0) { // Medium Impact
+    if (type == 0) {
         UIImpactFeedbackGenerator *gen = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
         [gen impactOccurred];
-    } else if (type == 1) { // Success
+    } else if (type == 1) {
         UINotificationFeedbackGenerator *gen = [[UINotificationFeedbackGenerator alloc] init];
         [gen notificationOccurred:UINotificationFeedbackTypeSuccess];
-    } else if (type == 2) { // Error
+    } else if (type == 2) {
         UINotificationFeedbackGenerator *gen = [[UINotificationFeedbackGenerator alloc] init];
         [gen notificationOccurred:UINotificationFeedbackTypeError];
     }
@@ -212,7 +210,7 @@
         if (!model) { @try { model = [self valueForKey:@"model"]; } @catch (NSException *e) {} }
 
         // -------------------------------------------------------------
-        // أ) معالجة التنزيل للصور (Photo Mode / Carousel)
+        // 1. معالجة الصور (Photo Posts)
         // -------------------------------------------------------------
         NSArray *imagesArray = nil;
         @try { imagesArray = [model valueForKey:@"images"]; } @catch (NSException *e) {}
@@ -249,15 +247,8 @@
             }
         }
 
-        // خط تراجع ذكي: التقاط الصورة مباشرة من الشاشة في حال لم يتوفر رابط
-        UIImage *screenImage = [self extractVisibleImageFromView:self.view];
-        if (screenImage) {
-            [self saveImageToPhotos:screenImage];
-            return;
-        }
-
         // -------------------------------------------------------------
-        // ب) معالجة التنزيل للفيديو (HD Video)
+        // 2. معالجة الفيديو (Video Posts)
         // -------------------------------------------------------------
         id videoModel = nil;
         @try { videoModel = [model valueForKey:@"video"]; } @catch (NSException *e) {}
@@ -265,17 +256,17 @@
         if (videoModel) {
             NSString *bestVideoURL = nil;
 
-            // البحث عن رابط التحميل الأصلي غير المضغوط
+            // أ) البحث عن رابط التنزيل المباشر
             id downloadURLModel = nil;
             @try { downloadURLModel = [videoModel valueForKey:@"downloadURL"]; } @catch (NSException *e) {}
             if (downloadURLModel) {
                 NSArray *dlURLs = nil;
                 @try { dlURLs = [downloadURLModel valueForKey:@"originURLList"]; } @catch (NSException *e) {}
                 if (!dlURLs) { @try { dlURLs = [downloadURLModel valueForKey:@"urlList"]; } @catch (NSException *e) {} }
-                if (dlURLs.count > 0) bestVideoURL = dlURLs.firstObject;
+                if (dlURLs && dlURLs.count > 0) bestVideoURL = dlURLs.firstObject;
             }
 
-            // البحث عن أعلى Bitrate
+            // ب) البحث عن أعلى Bitrate
             if (!bestVideoURL) {
                 NSArray *bitrateList = nil;
                 @try { bitrateList = [videoModel valueForKey:@"bitrateModels"]; } @catch (NSException *e) {}
@@ -299,11 +290,12 @@
                         NSArray *bURLs = nil;
                         @try { bURLs = [playAddr valueForKey:@"originURLList"]; } @catch (NSException *e) {}
                         if (!bURLs) { @try { bURLs = [playAddr valueForKey:@"urlList"]; } @catch (NSException *e) {} }
-                        if (bURLs.count > 0) bestVideoURL = bURLs.firstObject;
+                        if (bURLs && bURLs.count > 0) bestVideoURL = bURLs.firstObject;
                     }
                 }
             }
 
+            // ج) البحث عن رابط التشغيل playURL
             if (!bestVideoURL) {
                 id playURLModel = nil;
                 @try { playURLModel = [videoModel valueForKey:@"playURL"]; } @catch (NSException *e) {}
@@ -311,7 +303,7 @@
                     NSArray *playURLs = nil;
                     @try { playURLs = [playURLModel valueForKey:@"originURLList"]; } @catch (NSException *e) {}
                     if (!playURLs) { @try { playURLs = [playURLModel valueForKey:@"urlList"]; } @catch (NSException *e) {} }
-                    if (playURLs.count > 0) bestVideoURL = playURLs.firstObject;
+                    if (playURLs && playURLs.count > 0) bestVideoURL = playURLs.firstObject;
                 }
             }
 
@@ -319,6 +311,15 @@
                 [self downloadAndSaveHDVideo:bestVideoURL];
                 return;
             }
+        }
+
+        // -------------------------------------------------------------
+        // 3. التقاط الصورة من الشاشة كخيار أخير فقط للصور (Fallback)
+        // -------------------------------------------------------------
+        UIImage *screenImage = [self extractVisibleImageFromView:self.view];
+        if (screenImage) {
+            [self saveImageToPhotos:screenImage];
+            return;
         }
 
         [WheeHUD showErrorInView:self.view text:@"تعذر العثور على ملف الوسائط!"];
@@ -343,7 +344,6 @@
                 }
             }
             
-            // في حال فشل التحميل عبر الشبكة بسبب الحظر، استخراج الصورة المباشرة من الشاشة
             UIImage *screenImage = [self extractVisibleImageFromView:self.view];
             if (screenImage) {
                 [self saveImageToPhotos:screenImage];
@@ -377,7 +377,7 @@
 - (UIImage *)extractVisibleImageFromView:(UIView *)view {
     if ([view isKindOfClass:[UIImageView class]]) {
         UIImageView *imgView = (UIImageView *)view;
-        if (imgView.image && imgView.bounds.size.width > 120 && imgView.bounds.size.height > 120) {
+        if (imgView.image && imgView.bounds.size.width > 200 && imgView.bounds.size.height > 200) {
             return imgView.image;
         }
     }
@@ -417,7 +417,7 @@
                     [WheeHUD showSuccessInView:self.view text:@"تم حفظ الفيديو بنجاح!"];
                     [self triggerHapticFeedback:1];
                 } else {
-                    [WheeHUD showErrorInView:self.view text:@"خطأ أثناء نقل الفيديو للبوم الصور!"];
+                    [WheeHUD showErrorInView:self.view text:@"خطأ أثناء نقل الفيديو لألبوم الصور!"];
                     [self triggerHapticFeedback:2];
                 }
             });
